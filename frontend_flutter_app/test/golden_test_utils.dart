@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,6 +42,21 @@ class GoldenTestUtils {
   /// Creates an in-memory `ImageProvider` suitable for golden tests.
   static ImageProvider stableTestImageProvider() {
     return MemoryImage(_k2x2PngBytes);
+  }
+
+  /// Creates an `ImageProvider` that deterministically stays "loading" until
+  /// [ControlledTestImageProvider.complete] is called.
+  ///
+  /// This allows us to capture a stable "placeholder" golden.
+  static ControlledTestImageProvider controlledLoadingImageProvider() {
+    return ControlledTestImageProvider(bytes: _k2x2PngBytes);
+  }
+
+  /// Creates an `ImageProvider` that deterministically fails to decode/load.
+  ///
+  /// This allows us to capture error rendering without any I/O.
+  static ImageProvider failingTestImageProvider() {
+    return const FailingTestImageProvider();
   }
 
   /// Wraps a widget with a deterministic test harness:
@@ -80,6 +98,61 @@ class GoldenTestUtils {
     );
   }
 
+  /// A harness variant that embeds the [child] in a scrollable, so widgets that
+  /// depend on [Scrollable.recommendDeferredLoadingForContext] can be tested.
+  ///
+  /// [topPadding] controls how far the child is placed below the viewport. When
+  /// [topPadding] is large, the child starts offscreen (good for "deferred"
+  /// snapshots). When small/zero, the child is immediately in view.
+  static Widget scrollHarness({
+    required Widget child,
+    required double devicePixelRatio,
+    required Size viewportSize,
+    required double topPadding,
+    Color background = const Color(0xFFFFFFFF),
+  }) {
+    final ThemeData theme = ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF3B82F6),
+        brightness: Brightness.light,
+      ),
+      scaffoldBackgroundColor: background,
+    );
+
+    return MaterialApp(
+      theme: theme,
+      home: MediaQuery(
+        data: MediaQueryData(
+          size: viewportSize,
+          devicePixelRatio: devicePixelRatio,
+          textScaler: const TextScaler.linear(1.0),
+        ),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: ColoredBox(
+            color: background,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: viewportSize.width,
+                height: viewportSize.height,
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: <Widget>[
+                    SizedBox(height: topPadding),
+                    Center(child: child),
+                    const SizedBox(height: 400),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Configures golden comparison to use `test/goldens/` directory.
   ///
   /// Call once per file in `setUpAll`.
@@ -90,7 +163,7 @@ class GoldenTestUtils {
     if (currentComparator is LocalFileComparator) {
       // If already a LocalFileComparator, just ensure the base is `test/`.
       final Uri testDir = currentComparator.basedir;
-      if (testDir.path.endsWith('/test/') || testDir.path.endsWith(r'\test\')) {
+      if (testDir.path.endsWith('/test/') || testDir.path.endsWith(r'\\test\\')) {
         return;
       }
     }
@@ -128,4 +201,76 @@ class GoldenTestUtils {
 
   /// Returns the relative golden file path under `test/`.
   static String goldenPath(String fileName) => '$goldenDir/$fileName';
+}
+
+/// An `ImageProvider` for tests that does not resolve until [complete] is called.
+class ControlledTestImageProvider
+    extends ImageProvider<ControlledTestImageProvider> {
+  ControlledTestImageProvider({required this.bytes});
+
+  final Uint8List bytes;
+
+  final Completer<void> _gate = Completer<void>();
+
+  /// Allows the image to resolve (transitioning from placeholder to image).
+  void complete() {
+    if (!_gate.isCompleted) _gate.complete();
+  }
+
+  @override
+  Future<ControlledTestImageProvider> obtainKey(ImageConfiguration configuration) {
+    return SynchronousFuture<ControlledTestImageProvider>(this);
+  }
+
+  @override
+  ImageStreamCompleter loadImage(
+    ControlledTestImageProvider key,
+    ImageDecoderCallback decode,
+  ) {
+    // Flutter 3.29+ ImageDecoderCallback expects an ImmutableBuffer.
+    final Future<ui.Codec> codecFuture = _gate.future.then((_) async {
+      final ui.ImmutableBuffer buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+      return decode(buffer);
+    });
+
+    return OneFrameImageStreamCompleter(
+      codecFuture.then((ui.Codec codec) async {
+        final ui.FrameInfo frame = await codec.getNextFrame();
+        return ImageInfo(image: frame.image);
+      }),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is ControlledTestImageProvider && identical(other.bytes, bytes);
+
+  @override
+  int get hashCode => identityHashCode(bytes);
+}
+
+/// An `ImageProvider` that always fails to decode/load (deterministic error).
+class FailingTestImageProvider extends ImageProvider<FailingTestImageProvider> {
+  const FailingTestImageProvider();
+
+  @override
+  Future<FailingTestImageProvider> obtainKey(ImageConfiguration configuration) {
+    return SynchronousFuture<FailingTestImageProvider>(this);
+  }
+
+  @override
+  ImageStreamCompleter loadImage(
+    FailingTestImageProvider key,
+    ImageDecoderCallback decode,
+  ) {
+    return OneFrameImageStreamCompleter(
+      Future<ImageInfo>.error(StateError('FailingTestImageProvider error')),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) => other is FailingTestImageProvider;
+
+  @override
+  int get hashCode => runtimeType.hashCode;
 }

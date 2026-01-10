@@ -85,11 +85,27 @@ Golden PNG baselines are stored under:
 
 Files follow the naming convention:
 
+#### Loaded image (baseline)
 - `thumbnail_list_200x120_dpr1.png`
 - `thumbnail_list_200x120_dpr2.png`
 - `thumbnail_list_200x120_dpr3.png`
 - `thumbnail_grid_160x160_dpr1.png`
+- `thumbnail_detail_320x180_dpr2.png`
 - ...
+
+#### Placeholder / loading (before image resolves)
+- `thumbnail_loading_{w}x{h}_dpr{n}.png`
+- `thumbnail_loading_resolved_{w}x{h}_dpr{n}.png` (same provider after forced resolve)
+
+#### Error state (broken image / error placeholder)
+- `thumbnail_error_{w}x{h}_dpr{n}.png`
+
+#### Lazy loading phases (deferred vs in-view)
+- `thumbnail_lazy_deferred_{w}x{h}_dpr{n}.png`
+- `thumbnail_lazy_inview_{w}x{h}_dpr{n}.png`
+
+All of the above are generated without network I/O by using in-memory/fake
+`ImageProvider`s.
 
 ### Running / updating goldens
 
