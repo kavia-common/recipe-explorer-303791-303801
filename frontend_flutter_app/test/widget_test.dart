@@ -35,4 +35,46 @@ void main() {
     expect(find.text('Favorites'), findsOneWidget);
     expect(find.text('Your Favorites'), findsOneWidget);
   });
+
+  testWidgets(
+      'Search: active indicator count matches selected facets; clear all keeps query; undo restores facets',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    // Navigate to Search.
+    await tester.tap(find.byIcon(Icons.search_outlined));
+    await tester.pumpAndSettle();
+
+    // Enter a query.
+    await tester.enterText(find.byType(TextField), 'pizza');
+    await tester.pumpAndSettle();
+    expect(find.text('pizza'), findsOneWidget);
+
+    // Select one Cuisine and one Diet.
+    await tester.tap(find.text('Italian'));
+    await tester.pump(const Duration(milliseconds: 220));
+    await tester.tap(find.text('Vegan'));
+    await tester.pump(const Duration(milliseconds: 220));
+
+    // Active filters pill count should be 2.
+    expect(find.text('Active filters'), findsOneWidget);
+    expect(find.text('2'), findsWidgets);
+
+    // Clear all facets (but keep query).
+    await tester.tap(find.text('Clear all'));
+    await tester.pump(); // begin snackbar
+
+    // Snackbar appears.
+    expect(find.text('Filters cleared'), findsOneWidget);
+
+    // Query should still be present.
+    expect(find.text('pizza'), findsOneWidget);
+
+    // Undo should restore facets and thus active count.
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Active filters'), findsOneWidget);
+    expect(find.text('2'), findsWidgets);
+  });
 }

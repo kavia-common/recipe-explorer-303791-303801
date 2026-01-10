@@ -30,19 +30,25 @@ void main() {
 
     // Cuisine matches (Italian) and diet matches -> true.
     expect(
-      filters.matches(recipe(cuisine: 'Italian', diets: <String>['Vegan'], minutes: 20)),
+      filters.matches(
+        recipe(cuisine: 'Italian', diets: <String>['Vegan'], minutes: 20),
+      ),
       isTrue,
     );
 
     // Cuisine matches (Mexican) but diet doesn't -> false (AND across categories).
     expect(
-      filters.matches(recipe(cuisine: 'Mexican', diets: <String>[], minutes: 20)),
+      filters.matches(
+        recipe(cuisine: 'Mexican', diets: <String>[], minutes: 20),
+      ),
       isFalse,
     );
 
     // Diet matches but cuisine not in selection -> false.
     expect(
-      filters.matches(recipe(cuisine: 'Indian', diets: <String>['Vegan'], minutes: 20)),
+      filters.matches(
+        recipe(cuisine: 'Indian', diets: <String>['Vegan'], minutes: 20),
+      ),
       isFalse,
     );
   });
@@ -57,9 +63,24 @@ void main() {
       },
     );
 
-    expect(filters.matches(recipe(cuisine: 'Italian', diets: const <String>[], minutes: 10)), isTrue);
-    expect(filters.matches(recipe(cuisine: 'Italian', diets: const <String>[], minutes: 30)), isFalse);
-    expect(filters.matches(recipe(cuisine: 'Italian', diets: const <String>[], minutes: 90)), isTrue);
+    expect(
+      filters.matches(
+        recipe(cuisine: 'Italian', diets: const <String>[], minutes: 10),
+      ),
+      isTrue,
+    );
+    expect(
+      filters.matches(
+        recipe(cuisine: 'Italian', diets: const <String>[], minutes: 30),
+      ),
+      isFalse,
+    );
+    expect(
+      filters.matches(
+        recipe(cuisine: 'Italian', diets: const <String>[], minutes: 90),
+      ),
+      isTrue,
+    );
   });
 
   test('Serialization round-trip', () {
@@ -73,5 +94,26 @@ void main() {
     expect(decoded.selectedCuisines, filters.selectedCuisines);
     expect(decoded.selectedDiets, filters.selectedDiets);
     expect(decoded.selectedTimeBuckets, filters.selectedTimeBuckets);
+  });
+
+  test('Facet count equals sum of selected sets', () {
+    const RecipeFilters filters = RecipeFilters(
+      selectedCuisines: <String>{'Italian', 'Mexican'},
+      selectedDiets: <String>{'Vegan'},
+      selectedTimeBuckets: <CookingTimeBucket>{
+        CookingTimeBucket.under15,
+        CookingTimeBucket.over60,
+      },
+    );
+
+    expect(filters.selectedCuisines.length, 2);
+    expect(filters.selectedDiets.length, 1);
+    expect(filters.selectedTimeBuckets.length, 2);
+    expect(
+      filters.selectedCuisines.length +
+          filters.selectedDiets.length +
+          filters.selectedTimeBuckets.length,
+      5,
+    );
   });
 }
