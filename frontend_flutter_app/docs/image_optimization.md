@@ -70,3 +70,42 @@ This helps balance performance and storage while keeping thumbnails responsive.
 - Recipe list cards (`RecipeCard`) -> `Thumbnail.image(lazy: true)`
 - Recipe grid tiles (`RecipeGridTile`) -> `Thumbnail.image(lazy: true)`
 - Recipe detail header (`RecipeDetailScreen`) -> `Thumbnail.image(useFullSizeCache: true)`
+
+## Golden tests (Thumbnail rendering)
+
+This repository includes a golden test suite to validate that `Thumbnail`
+renders consistently across common widget sizes and devicePixelRatios (DPRs),
+without relying on network images.
+
+### Where goldens live
+
+Golden PNG baselines are stored under:
+
+- `test/goldens/`
+
+Files follow the naming convention:
+
+- `thumbnail_list_200x120_dpr1.png`
+- `thumbnail_list_200x120_dpr2.png`
+- `thumbnail_list_200x120_dpr3.png`
+- `thumbnail_grid_160x160_dpr1.png`
+- ...
+
+### Running / updating goldens
+
+To run tests normally:
+
+```sh
+cd frontend_flutter_app
+flutter test
+```
+
+To (re)generate baseline images:
+
+```sh
+cd frontend_flutter_app
+flutter test --update-goldens
+```
+
+If goldens differ unexpectedly, ensure you are using the same Flutter version
+as CI, and avoid making platform-specific rendering changes.
