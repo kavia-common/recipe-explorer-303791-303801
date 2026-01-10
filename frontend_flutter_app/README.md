@@ -6,7 +6,10 @@ A new Flutter project.
 
 ## Image optimization
 
-See `docs/image_optimization.md` for how thumbnails are sized per layout constraints and devicePixelRatio.
+See `docs/image_optimization.md` for:
+- how thumbnails are sized per layout constraints and devicePixelRatio
+- lazy loading behavior (near-viewport network fetch)
+- cache eviction policies (memory + disk cache managers)
 
 This project is a starting point for a Flutter application.
 
