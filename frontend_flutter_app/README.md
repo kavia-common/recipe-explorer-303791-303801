@@ -4,6 +4,29 @@ A new Flutter project.
 
 ## Getting Started
 
+## Categories & filters (demo)
+
+This app supports local filtering (no backend) using demo recipe metadata:
+
+- **Cuisine** (e.g., Italian, Mexican, Indian)
+- **Diet** (e.g., Vegan, Vegetarian, Gluten-Free)
+- **Cooking time** buckets: `<15`, `15–30`, `30–60`, `>60`
+
+### Home → Categories
+Home includes a **Categories** section (horizontal chips) that quickly filters recipes by cuisine.
+
+### Search → Filters
+Search includes multi-select filter chips for cuisine, diet, and cooking time.
+
+- Multiple selections **within the same filter type** are combined as **OR**
+- Different filter types are combined as **AND**
+
+An active filter summary is shown with a **Clear all** action.
+If no recipes match, an empty-state message is displayed.
+
+### Persistence
+The last-used filters are saved to local storage using `SharedPreferences` and restored on next launch.
+
 ## Image optimization
 
 See `docs/image_optimization.md` for:
